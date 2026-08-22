@@ -347,45 +347,80 @@ function startScanner() {
 
 function showResult(data) {
 
+  const customer =
+    data.customer || {};
+
+  const vehicle =
+    data.vehicle || {};
+
+
   document
     .getElementById("customerName")
     .innerText =
-      data.customerName;
+      (
+        customer.firstName || ""
+      ) +
+      " " +
+      (
+        customer.lastName || ""
+      );
 
 
   document
     .getElementById("customerID")
     .innerText =
       "Customer ID: " +
-      data.customerID;
+      (
+        customer.customerID ||
+        data.customerID ||
+        ""
+      );
 
 
   document
     .getElementById("vehicleID")
     .innerText =
       "Vehicle ID: " +
-      data.vehicleID;
+      (
+        vehicle.vehicleID ||
+        data.vehicleID ||
+        ""
+      );
 
 
   document
     .getElementById("vehicle")
     .innerText =
       "Vehicle: " +
-      data.vehicle;
+      (
+        vehicle.make || ""
+      ) +
+      " " +
+      (
+        vehicle.model || ""
+      );
 
 
   document
     .getElementById("plate")
     .innerText =
       "Plate: " +
-      data.plate;
+      (
+        vehicle.plate ||
+        data.plate ||
+        ""
+      );
 
 
   document
     .getElementById("colour")
     .innerText =
       "Colour: " +
-      data.colour;
+      (
+        vehicle.colour ||
+        data.colour ||
+        ""
+      );
 
 
   document
