@@ -240,41 +240,33 @@ function extractCustomerID(decodedText) {
 function getCustomerFromBackend(customerID) {
 
   const callbackName =
-    "customerCallback_" +
-    Date.now();
+    "customerCallback_" + Date.now();
 
-  window[callbackName] =
-    function(data) {
+  window[callbackName] = function(data) {
 
-      delete window[callbackName];
+    delete window[callbackName];
 
-      const script =
-        document.getElementById(
-          callbackName
-        );
+    const script =
+      document.getElementById(callbackName);
 
-      if (script) {
-        script.remove();
-      }
+    if (script) {
+      script.remove();
+    }
 
+    if (!data || !data.success) {
 
-      if (!data.success) {
+      showMessage(
+        data && data.message
+          ? data.message
+          : "Customer not found."
+      );
 
-        showMessage(
-          data.message ||
-          "Customer not found."
-        );
+      return;
+    }
 
-        startScanner();
+    showResult(data);
 
-        return;
-
-      }
-
-
-      showResult(data);
-
-    };
+  };
 
 
   const url =
@@ -291,22 +283,21 @@ function getCustomerFromBackend(customerID) {
   script.id =
     callbackName;
 
-  script.src = url;
+  script.src =
+    url;
 
-  script.onerror =
-    function() {
 
-      delete window[callbackName];
+  script.onerror = function() {
 
-      script.remove();
+    delete window[callbackName];
 
-      showMessage(
-        "Unable to connect to the Car Wash system."
-      );
+    script.remove();
 
-      startScanner();
+    showMessage(
+      "Unable to connect to the Car Wash system."
+    );
 
-    };
+  };
 
 
   document
