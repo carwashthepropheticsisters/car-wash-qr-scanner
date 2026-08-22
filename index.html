@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Car Wash QR Scanner</title>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      color: #17202a;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      padding: 25px 20px 40px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      width: 70px;
+      height: 70px;
+      margin: auto;
+      border-radius: 50%;
+      background: #111827;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+    }
+
+    h1 {
+      margin: 15px 0 5px;
+      font-size: 25px;
+    }
+
+    .subtitle {
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 5px 20px rgba(0,0,0,.08);
+    }
+
+    #reader {
+      width: 100%;
+    }
+
+    .message {
+      margin-top: 15px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #fef3c7;
+      text-align: center;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 14px;
+      background: #f0fdf4;
+    }
+
+    .result-name {
+      font-size: 21px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    .result-line {
+      margin: 8px 0;
+      font-size: 15px;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 15px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: #111827;
+      color: white;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="header">
+
+    <div class="logo">
+      🚗
+    </div>
+
+    <h1>Car Wash QR Scanner</h1>
+
+    <div class="subtitle">
+      Scan the customer's QR code
+    </div>
+
+  </div>
+
+  <div class="card">
+
+    <div id="reader"></div>
+
+    <div id="message"
+         class="message hidden">
+    </div>
+
+    <div id="result"
+         class="result hidden">
+
+      <div id="customerName"
+           class="result-name">
+      </div>
+
+      <div id="customerID"
+           class="result-line">
+      </div>
+
+      <div id="vehicleID"
+           class="result-line">
+      </div>
+
+      <div id="vehicle"
+           class="result-line">
+      </div>
+
+      <div id="plate"
+           class="result-line">
+      </div>
+
+      <div id="colour"
+           class="result-line">
+      </div>
+
+      <button
+        class="primary"
+        onclick="scanAgain()">
+
+        SCAN ANOTHER CUSTOMER
+
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+const BACKEND_URL =
+  "https://script.google.com/macros/s/AKfycbxfpQTl7qV-T0mKcLUTR1sF4ED9TK6pv1YIP1hvXyXq4Vtmu7SvyqtqWUu7uwzJZgHz/exec";
+
+
+let scanner = null;
+let scanning = false;
+
+
+function showMessage(text) {
+
+  const message =
+    document.getElementById("message");
+
+  message.innerText = text;
+
+  message.classList.remove("hidden");
+
+}
+
+
+function hideMessage() {
+
+  document
+    .getElementById("message")
+    .classList
+    .add("hidden");
+
+}
+
+
+function extractCustomerID(decodedText) {
+
+  try {
+
+    const url =
+      new URL(decodedText);
+
+    const customer =
+      url.searchParams.get("customer");
+
+    if (customer) {
+      return customer;
+    }
+
+  } catch (error) {
+
+    // QR may contain only Customer ID
+
+  }
+
+  return decodedText.trim();
+}
+
+
+function getCustomerFromBackend(customerID) {
+
+  const url =
+    BACKEND_URL +
+    "?customer=" +
+    encodeURIComponent(customerID);
+
+  fetch(url)
+
+    .then(response => response.json())
+
+    .then(data => {
+
+      if (!data.success) {
+
+        showMessage(
+          data.message ||
+          "Customer not found."
+        );
+
+        startScanner();
+
+        return;
+      }
+
+      showResult(data);
+
+    })
+
+    .catch(error => {
+
+      console.error(error);
+
+      showMessage(
+        "Unable to connect to the Car Wash system."
+      );
+
+      startScanner();
+
+    });
+
+}
+
+
+function onScanSuccess(decodedText) {
+
+  if (!decodedText || !scanning) {
+    return;
+  }
+
+  scanning = false;
+
+  if (scanner) {
+
+    scanner.stop()
+      .catch(() => {});
+
+  }
+
+  const customerID =
+    extractCustomerID(decodedText);
+
+  if (!customerID) {
+
+    showMessage(
+      "Invalid customer QR code."
+    );
+
+    startScanner();
+
+    return;
+  }
+
+  showMessage(
+    "Customer found. Loading details..."
+  );
+
+  getCustomerFromBackend(customerID);
+
+}
+
+
+function onScanFailure(error) {
+
+  // Normal scanning failures are ignored.
+
+}
+
+
+function startScanner() {
+
+  hideMessage();
+
+  document
+    .getElementById("result")
+    .classList
+    .add("hidden");
+
+  document
+    .getElementById("reader")
+    .classList
+    .remove("hidden");
+
+
+  scanner =
+    new Html5Qrcode("reader");
+
+
+  scanner
+    .start(
+
+      {
+        facingMode: "environment"
+      },
+
+      {
+        fps: 10,
+        qrbox: {
+          width: 250,
+          height: 250
+        }
+      },
+
+      onScanSuccess,
+      onScanFailure
+
+    )
+
+    .then(() => {
+
+      scanning = true;
+
+    })
+
+    .catch(error => {
+
+      console.error(error);
+
+      showMessage(
+        "Unable to open the camera. Please allow camera access and try again."
+      );
+
+    });
+
+}
+
+
+function showResult(data) {
+
+  document
+    .getElementById("customerName")
+    .innerText =
+      data.customerName;
+
+
+  document
+    .getElementById("customerID")
+    .innerText =
+      "Customer ID: " +
+      data.customerID;
+
+
+  document
+    .getElementById("vehicleID")
+    .innerText =
+      "Vehicle ID: " +
+      data.vehicleID;
+
+
+  document
+    .getElementById("vehicle")
+    .innerText =
+      "Vehicle: " +
+      data.vehicle;
+
+
+  document
+    .getElementById("plate")
+    .innerText =
+      "Plate: " +
+      data.plate;
+
+
+  document
+    .getElementById("colour")
+    .innerText =
+      "Colour: " +
+      data.colour;
+
+
+  document
+    .getElementById("reader")
+    .classList
+    .add("hidden");
+
+
+  document
+    .getElementById("message")
+    .classList
+    .add("hidden");
+
+
+  document
+    .getElementById("result")
+    .classList
+    .remove("hidden");
+
+}
+
+
+function scanAgain() {
+
+  startScanner();
+
+}
+
+
+window.onload =
+  function() {
+
+    startScanner();
+
+  };
+
+</script>
+
+</body>
+</html>
