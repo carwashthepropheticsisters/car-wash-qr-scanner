@@ -410,13 +410,10 @@ function lookupCustomer(customerID) {
    * Create callback function.
    */
 
-  window[callbackName] =
+window[callbackName] =
     function(data) {
 
-
-      /*
-       * Remove callback from window.
-       */
+      alert("CALLBACK RECEIVED");
 
       delete window[callbackName];
 
