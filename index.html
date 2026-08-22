@@ -212,7 +212,6 @@ function hideMessage() {
 
 }
 
-
 function extractCustomerID(decodedText) {
 
   try {
@@ -224,7 +223,11 @@ function extractCustomerID(decodedText) {
       url.searchParams.get("customer");
 
     if (customer) {
-      return customer;
+
+      return customer
+        .trim()
+        .toUpperCase();
+
     }
 
   } catch (error) {
@@ -233,86 +236,9 @@ function extractCustomerID(decodedText) {
 
   }
 
-  return decodedText.trim();
-}
-
-alert("QR Customer ID = " + customerID);
-function getCustomerFromBackend(customerID) {
-
-  const callbackName =
-    "customerCallback_" + Date.now();
-
-window[callbackName] = function(data) {
-
-  delete window[callbackName];
-
-  const script =
-    document.getElementById(callbackName);
-
-  if (script) {
-    script.remove();
-  }
-
-  if (!data) {
-
-    showMessage(
-      "No response received from backend."
-    );
-
-    return;
-
-  }
-
-  if (data.success !== true) {
-
-    showMessage(
-      "Backend response: " +
-      JSON.stringify(data)
-    );
-
-    return;
-
-  }
-
-  showResult(data);
-
-};
-
-
-  const url =
-    BACKEND_URL +
-    "?customer=" +
-    encodeURIComponent(customerID) +
-    "&callback=" +
-    callbackName;
-
-
-  const script =
-    document.createElement("script");
-
-  script.id =
-    callbackName;
-
-  script.src =
-    url;
-
-
-  script.onerror = function() {
-
-    delete window[callbackName];
-
-    script.remove();
-
-    showMessage(
-      "Unable to connect to the Car Wash system."
-    );
-
-  };
-
-
-  document
-    .body
-    .appendChild(script);
+  return String(decodedText)
+    .trim()
+    .toUpperCase();
 
 }
 
