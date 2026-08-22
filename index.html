@@ -1,14 +1,21 @@
 <!DOCTYPE html>
 <html>
+
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>Car Wash QR Scanner</title>
 
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
+
     * {
       box-sizing: border-box;
     }
@@ -71,6 +78,7 @@
       border-radius: 10px;
       background: #fef3c7;
       text-align: center;
+      line-height: 1.5;
     }
 
     .result {
@@ -110,8 +118,11 @@
     .hidden {
       display: none;
     }
+
   </style>
+
 </head>
+
 
 <body>
 
@@ -131,40 +142,52 @@
 
   </div>
 
+
   <div class="card">
 
     <div id="reader"></div>
 
-    <div id="message"
-         class="message hidden">
+
+    <div
+      id="message"
+      class="message hidden">
     </div>
 
-    <div id="result"
-         class="result hidden">
 
-      <div id="customerName"
-           class="result-name">
+    <div
+      id="result"
+      class="result hidden">
+
+      <div
+        id="customerName"
+        class="result-name">
       </div>
 
-      <div id="customerID"
-           class="result-line">
+      <div
+        id="customerID"
+        class="result-line">
       </div>
 
-      <div id="vehicleID"
-           class="result-line">
+      <div
+        id="vehicleID"
+        class="result-line">
       </div>
 
-      <div id="vehicle"
-           class="result-line">
+      <div
+        id="vehicle"
+        class="result-line">
       </div>
 
-      <div id="plate"
-           class="result-line">
+      <div
+        id="plate"
+        class="result-line">
       </div>
 
-      <div id="colour"
-           class="result-line">
+      <div
+        id="colour"
+        class="result-line">
       </div>
+
 
       <button
         class="primary"
@@ -183,13 +206,27 @@
 
 <script>
 
+
+/*
+==================================================
+BACKEND
+==================================================
+*/
+
 const BACKEND_URL =
   "https://script.google.com/macros/s/AKfycbxfpQTl7qV-T0mKcLUTR1sF4ED9TK6pv1YIP1hvXyXq4Vtmu7SvyqtqWUu7uwzJZgHz/exec";
 
 
 let scanner = null;
+
 let scanning = false;
 
+
+/*
+==================================================
+MESSAGES
+==================================================
+*/
 
 function showMessage(text) {
 
@@ -212,7 +249,26 @@ function hideMessage() {
 
 }
 
+
+/*
+==================================================
+EXTRACT CUSTOMER ID
+==================================================
+*/
+
 function extractCustomerID(decodedText) {
+
+  decodedText =
+    String(decodedText || "").trim();
+
+
+  /*
+   * CASE 1:
+   * QR contains a URL
+   *
+   * Example:
+   * https://.../exec?customer=C000003
+   */
 
   try {
 
@@ -232,33 +288,58 @@ function extractCustomerID(decodedText) {
 
   } catch (error) {
 
-    // QR may contain only Customer ID
+    /*
+     * Not a URL.
+     * Continue below.
+     */
 
   }
 
-  return String(decodedText)
+
+  /*
+   * CASE 2:
+   * QR contains only:
+   *
+   * C000003
+   */
+
+  return decodedText
     .trim()
     .toUpperCase();
 
 }
 
+
+/*
+==================================================
+SCAN SUCCESS
+==================================================
+*/
+
 function onScanSuccess(decodedText) {
 
   if (!decodedText || !scanning) {
+
     return;
+
   }
+
 
   scanning = false;
 
+
   if (scanner) {
 
-    scanner.stop()
+    scanner
+      .stop()
       .catch(() => {});
 
   }
 
+
   const customerID =
     extractCustomerID(decodedText);
+
 
   if (!customerID) {
 
@@ -266,40 +347,494 @@ function onScanSuccess(decodedText) {
       "Invalid customer QR code."
     );
 
+    scanning = false;
+
     startScanner();
 
     return;
+
   }
 
+
+  /*
+   * Show exactly what we are looking up.
+   */
+
   showMessage(
-    "Customer found. Loading details..."
+    "Customer ID: " +
+    customerID +
+    "\n\nLoading customer details..."
   );
 
-  getCustomerFromBackend(customerID);
+
+  lookupCustomer(customerID);
 
 }
 
+
+/*
+==================================================
+SCAN FAILURE
+==================================================
+*/
 
 function onScanFailure(error) {
 
-  // Normal scanning failures are ignored.
+  /*
+   * Normal camera scanning failures
+   * are ignored.
+   */
 
 }
 
 
-function startScanner() {
+/*
+==================================================
+LOOK UP CUSTOMER
+==================================================
+*/
+
+function lookupCustomer(customerID) {
+
+
+  /*
+   * Create a unique JSONP callback.
+   */
+
+  const callbackName =
+    "carWashCustomer_" +
+    Date.now();
+
+
+  /*
+   * Create callback function.
+   */
+
+  window[callbackName] =
+    function(data) {
+
+
+      /*
+       * Remove callback from window.
+       */
+
+      delete window[callbackName];
+
+
+      /*
+       * Remove script tag.
+       */
+
+      const script =
+        document.getElementById(
+          callbackName
+        );
+
+
+      if (script) {
+
+        script.remove();
+
+      }
+
+
+      /*
+       * No response.
+       */
+
+      if (!data) {
+
+        showMessage(
+          "No response received from the customer database."
+        );
+
+        return;
+
+      }
+
+
+      /*
+       * Backend says customer wasn't found.
+       */
+
+      if (data.success !== true) {
+
+        showMessage(
+          data.message ||
+          "Customer not found."
+        );
+
+        return;
+
+      }
+
+
+      /*
+       * Customer found.
+       */
+
+      displayCustomer(data);
+
+    };
+
+
+  /*
+   * Build backend request.
+   */
+
+  const requestURL =
+    BACKEND_URL +
+    "?customer=" +
+    encodeURIComponent(customerID) +
+    "&callback=" +
+    callbackName;
+
+
+  /*
+   * Create JSONP script.
+   */
+
+  const script =
+    document.createElement("script");
+
+
+  script.id =
+    callbackName;
+
+
+  script.src =
+    requestURL;
+
+
+  /*
+   * Backend connection failure.
+   */
+
+  script.onerror =
+    function() {
+
+      delete window[callbackName];
+
+      script.remove();
+
+      showMessage(
+        "Unable to connect to the Car Wash customer database."
+      );
+
+    };
+
+
+  /*
+   * Timeout protection.
+   */
+
+  setTimeout(
+    function() {
+
+      if (
+        document.getElementById(
+          callbackName
+        )
+      ) {
+
+        delete window[callbackName];
+
+        script.remove();
+
+        showMessage(
+          "The customer database took too long to respond. Please try again."
+        );
+
+      }
+
+    },
+    10000
+  );
+
+
+  /*
+   * Send request.
+   */
+
+  document
+    .body
+    .appendChild(script);
+
+}
+
+
+/*
+==================================================
+DISPLAY CUSTOMER
+==================================================
+*/
+
+function displayCustomer(data) {
+
+
+  /*
+   * Support both possible backend structures.
+   */
+
+  const customer =
+    data.customer || null;
+
+
+  const vehicle =
+    data.vehicle || null;
+
+
+  /*
+   * CUSTOMER NAME
+   */
+
+  let customerName = "";
+
+
+  if (customer) {
+
+    customerName =
+      (
+        customer.firstName || ""
+      ) +
+      " " +
+      (
+        customer.lastName || ""
+      );
+
+  }
+
+
+  if (!customerName.trim()) {
+
+    customerName =
+      data.customerName || "";
+
+  }
+
+
+  /*
+   * CUSTOMER ID
+   */
+
+  const customerID =
+    (
+      customer &&
+      (
+        customer.customerID ||
+        customer.id
+      )
+    ) ||
+    data.customerID ||
+    "";
+
+
+  /*
+   * VEHICLE ID
+   */
+
+  const vehicleID =
+    (
+      vehicle &&
+      (
+        vehicle.vehicleID ||
+        vehicle.id
+      )
+    ) ||
+    data.vehicleID ||
+    "";
+
+
+  /*
+   * VEHICLE
+   */
+
+  let vehicleName = "";
+
+
+  if (vehicle) {
+
+    vehicleName =
+      (
+        vehicle.make || ""
+      ) +
+      " " +
+      (
+        vehicle.model || ""
+      );
+
+  }
+
+
+  if (!vehicleName.trim()) {
+
+    vehicleName =
+      data.vehicle || "";
+
+  }
+
+
+  /*
+   * PLATE
+   */
+
+  const plate =
+    (
+      vehicle &&
+      vehicle.plate
+    ) ||
+    data.plate ||
+    "";
+
+
+  /*
+   * COLOUR
+   */
+
+  const colour =
+    (
+      vehicle &&
+      (
+        vehicle.colour ||
+        vehicle.color
+      )
+    ) ||
+    data.colour ||
+    data.color ||
+    "";
+
+
+  /*
+   * DISPLAY
+   */
+
+  document
+    .getElementById("customerName")
+    .innerText =
+      customerName.trim();
+
+
+  document
+    .getElementById("customerID")
+    .innerText =
+      "Customer ID: " +
+      customerID;
+
+
+  document
+    .getElementById("vehicleID")
+    .innerText =
+      "Vehicle ID: " +
+      vehicleID;
+
+
+  document
+    .getElementById("vehicle")
+    .innerText =
+      "Vehicle: " +
+      vehicleName.trim();
+
+
+  document
+    .getElementById("plate")
+    .innerText =
+      "Plate: " +
+      plate;
+
+
+  document
+    .getElementById("colour")
+    .innerText =
+      "Colour: " +
+      colour;
+
+
+  /*
+   * Hide scanner.
+   */
+
+  document
+    .getElementById("reader")
+    .classList
+    .add("hidden");
+
+
+  /*
+   * Hide loading message.
+   */
 
   hideMessage();
+
+
+  /*
+   * Show customer.
+   */
+
+  document
+    .getElementById("result")
+    .classList
+    .remove("hidden");
+
+}
+
+
+/*
+==================================================
+SCAN AGAIN
+==================================================
+*/
+
+function scanAgain() {
 
   document
     .getElementById("result")
     .classList
     .add("hidden");
 
+
+  startScanner();
+
+}
+
+
+/*
+==================================================
+START CAMERA
+==================================================
+*/
+
+function startScanner() {
+
+
+  hideMessage();
+
+
+  document
+    .getElementById("result")
+    .classList
+    .add("hidden");
+
+
   document
     .getElementById("reader")
     .classList
     .remove("hidden");
+
+
+  scanning = false;
+
+
+  /*
+   * Destroy previous scanner instance.
+   */
+
+  if (scanner) {
+
+    scanner
+      .clear()
+      .catch(() => {});
+
+  }
 
 
   scanner =
@@ -315,140 +850,52 @@ function startScanner() {
 
       {
         fps: 10,
+
         qrbox: {
           width: 250,
           height: 250
         }
+
       },
 
       onScanSuccess,
+
       onScanFailure
 
     )
 
-    .then(() => {
 
-      scanning = true;
+    .then(
+      function() {
 
-    })
+        scanning = true;
 
-    .catch(error => {
-
-      console.error(error);
-
-      showMessage(
-        "Unable to open the camera. Please allow camera access and try again."
-      );
-
-    });
-
-}
+      }
+    )
 
 
-function showResult(data) {
+    .catch(
+      function(error) {
 
-  const customer =
-    data.customer || {};
+        console.error(error);
 
-  const vehicle =
-    data.vehicle || {};
+        scanning = false;
 
+        showMessage(
+          "Unable to open the camera. Please allow camera access and try again."
+        );
 
-  document
-    .getElementById("customerName")
-    .innerText =
-      (
-        customer.firstName || ""
-      ) +
-      " " +
-      (
-        customer.lastName || ""
-      );
-
-
-  document
-    .getElementById("customerID")
-    .innerText =
-      "Customer ID: " +
-      (
-        customer.customerID ||
-        data.customerID ||
-        ""
-      );
-
-
-  document
-    .getElementById("vehicleID")
-    .innerText =
-      "Vehicle ID: " +
-      (
-        vehicle.vehicleID ||
-        data.vehicleID ||
-        ""
-      );
-
-
-  document
-    .getElementById("vehicle")
-    .innerText =
-      "Vehicle: " +
-      (
-        vehicle.make || ""
-      ) +
-      " " +
-      (
-        vehicle.model || ""
-      );
-
-
-  document
-    .getElementById("plate")
-    .innerText =
-      "Plate: " +
-      (
-        vehicle.plate ||
-        data.plate ||
-        ""
-      );
-
-
-  document
-    .getElementById("colour")
-    .innerText =
-      "Colour: " +
-      (
-        vehicle.colour ||
-        data.colour ||
-        ""
-      );
-
-
-  document
-    .getElementById("reader")
-    .classList
-    .add("hidden");
-
-
-  document
-    .getElementById("message")
-    .classList
-    .add("hidden");
-
-
-  document
-    .getElementById("result")
-    .classList
-    .remove("hidden");
+      }
+    );
 
 }
 
 
-function scanAgain() {
-
-  startScanner();
-
-}
-
+/*
+==================================================
+START APPLICATION
+==================================================
+*/
 
 window.onload =
   function() {
@@ -460,4 +907,5 @@ window.onload =
 </script>
 
 </body>
+
 </html>
