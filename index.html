@@ -242,31 +242,41 @@ function getCustomerFromBackend(customerID) {
   const callbackName =
     "customerCallback_" + Date.now();
 
-  window[callbackName] = function(data) {
+window[callbackName] = function(data) {
 
-    delete window[callbackName];
+  delete window[callbackName];
 
-    const script =
-      document.getElementById(callbackName);
+  const script =
+    document.getElementById(callbackName);
 
-    if (script) {
-      script.remove();
-    }
+  if (script) {
+    script.remove();
+  }
 
-    if (!data || !data.success) {
+  if (!data) {
 
-      showMessage(
-        data && data.message
-          ? data.message
-          : "Customer not found."
-      );
+    showMessage(
+      "No response received from backend."
+    );
 
-      return;
-    }
+    return;
 
-    showResult(data);
+  }
 
-  };
+  if (data.success !== true) {
+
+    showMessage(
+      "Backend response: " +
+      JSON.stringify(data)
+    );
+
+    return;
+
+  }
+
+  showResult(data);
+
+};
 
 
   const url =
