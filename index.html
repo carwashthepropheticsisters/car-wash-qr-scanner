@@ -413,7 +413,6 @@ function lookupCustomer(customerID) {
 window[callbackName] =
     function(data) {
 
-      alert("CALLBACK RECEIVED");
 
       delete window[callbackName];
 
@@ -559,221 +558,69 @@ window[callbackName] =
 
 }
 
-
-/*
-==================================================
-DISPLAY CUSTOMER
-==================================================
-*/
-
 function displayCustomer(data) {
-
-
   /*
-   * Support both possible backend structures.
+   * The backend returns a flat object:
+   *
+   * customerName
+   * customerID
+   * vehicleID
+   * vehicle
+   * plate
+   * colour
+   * vehicleType
    */
-
-  const customer =
-    data.customer || null;
-
-
-  const vehicle =
-    data.vehicle || null;
-
-
-  /*
-   * CUSTOMER NAME
-   */
-
-  let customerName = "";
-
-
-  if (customer) {
-
-    customerName =
-      (
-        customer.firstName || ""
-      ) +
-      " " +
-      (
-        customer.lastName || ""
-      );
-
-  }
-
-
-  if (!customerName.trim()) {
-
-    customerName =
-      data.customerName || "";
-
-  }
-
-
-  /*
-   * CUSTOMER ID
-   */
-
-  const customerID =
-    (
-      customer &&
-      (
-        customer.customerID ||
-        customer.id
-      )
-    ) ||
-    data.customerID ||
-    "";
-
-
-  /*
-   * VEHICLE ID
-   */
-
-  const vehicleID =
-    (
-      vehicle &&
-      (
-        vehicle.vehicleID ||
-        vehicle.id
-      )
-    ) ||
-    data.vehicleID ||
-    "";
-
-
-  /*
-   * VEHICLE
-   */
-
-  let vehicleName = "";
-
-
-  if (vehicle) {
-
-    vehicleName =
-      (
-        vehicle.make || ""
-      ) +
-      " " +
-      (
-        vehicle.model || ""
-      );
-
-  }
-
-
-  if (!vehicleName.trim()) {
-
-    vehicleName =
-      data.vehicle || "";
-
-  }
-
-
-  /*
-   * PLATE
-   */
-
-  const plate =
-    (
-      vehicle &&
-      vehicle.plate
-    ) ||
-    data.plate ||
-    "";
-
-
-  /*
-   * COLOUR
-   */
-
-  const colour =
-    (
-      vehicle &&
-      (
-        vehicle.colour ||
-        vehicle.color
-      )
-    ) ||
-    data.colour ||
-    data.color ||
-    "";
-
-
-  /*
-   * DISPLAY
-   */
-
   document
     .getElementById("customerName")
     .innerText =
-      customerName.trim();
-
-
+      data.customerName || "Customer";
   document
     .getElementById("customerID")
     .innerText =
       "Customer ID: " +
-      customerID;
-
-
+      (data.customerID || "");
   document
     .getElementById("vehicleID")
     .innerText =
       "Vehicle ID: " +
-      vehicleID;
-
-
+      (data.vehicleID || "");
   document
     .getElementById("vehicle")
     .innerText =
       "Vehicle: " +
-      vehicleName.trim();
-
-
+      (data.vehicle || "");
   document
     .getElementById("plate")
     .innerText =
       "Plate: " +
-      plate;
-
-
+      (data.plate || "");
   document
     .getElementById("colour")
     .innerText =
       "Colour: " +
-      colour;
-
-
+      (data.colour || "");
   /*
    * Hide scanner.
    */
-
   document
     .getElementById("reader")
     .classList
     .add("hidden");
-
-
   /*
    * Hide loading message.
    */
-
-  hideMessage();
-
-
+  document
+    .getElementById("message")
+    .classList
+    .add("hidden");
   /*
-   * Show customer.
+   * Show customer details.
    */
-
   document
     .getElementById("result")
     .classList
     .remove("hidden");
-
 }
-
 
 /*
 ==================================================
